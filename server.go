@@ -4,7 +4,9 @@ import (
 	"Go-Graphql/graph"
 	"Go-Graphql/graph/generated"
 	"Go-Graphql/postgre"
+	"github.com/go-chi/chi"
 	"github.com/go-pg/pg/v10"
+	"github.com/rs/cors"
 	"log"
 	"net/http"
 	"os"
@@ -29,13 +31,21 @@ func main() {
 		port = defaultPort
 	}
 
+	router := chi.NewRouter()
+
+	router.Use(cors.New(cors.Options{
+		AllowedOrigins:   []string{"http://localhost:3000"},
+		AllowCredentials: true,
+		Debug:            true,
+	}).Handler)
+
 	srv := handler.NewDefaultServer(generated.NewExecutableSchema(generated.Config{Resolvers: &graph.Resolver{
 		DB: db,
 	}}))
 
-	http.Handle("/", playground.Handler("GraphQL playground", "/query"))
-	http.Handle("/query", srv)
+	router.Handle("/", playground.Handler("GraphQL playground", "/query"))
+	router.Handle("/query", srv)
 
-	log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
-	log.Fatal(http.ListenAndServe(":"+port, nil))
+log.Printf("connect to http://localhost:%s/ for GraphQL playground", port)
+log.Fatal(http.ListenAndServe(":"+port, router))
 }
